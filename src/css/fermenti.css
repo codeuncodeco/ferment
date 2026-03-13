@@ -1,0 +1,580 @@
+/**
+ * Fermenti - Framework Styles
+ * Generalized UI component styles with fi- prefix
+ */
+
+/* ============================================
+   CSS Custom Properties (Design Tokens)
+   ============================================ */
+:root {
+  --fi-bg-primary: #FAF7F2;
+  --fi-bg-secondary: #F2ECE3;
+  --fi-bg-card: #FFFFFF;
+  --fi-text-primary: #2C1810;
+  --fi-text-secondary: #6B5344;
+  --fi-text-muted: #A89485;
+  --fi-accent-brine: #C4A35A;
+  --fi-accent-ferment: #D4553A;
+  --fi-accent-culture: #7B8F3A;
+  --fi-accent-aged: #8B6B4A;
+  --fi-tier-beginner: #8EAE68;
+  --fi-tier-seasoned: #C4A35A;
+  --fi-tier-ambitious: #D4813A;
+  --fi-tier-advanced: #D4553A;
+  --fi-tier-master: #6B3A5C;
+  --fi-success: #5C8F4A;
+  --fi-warning: #D4A03A;
+  --fi-danger: #C44A3A;
+  --fi-info: #4A7B8F;
+}
+
+.dark {
+  --fi-bg-primary: #1A1410;
+  --fi-bg-secondary: #241E18;
+  --fi-bg-card: #2E2620;
+  --fi-text-primary: #F2ECE3;
+  --fi-text-secondary: #C4B5A3;
+  --fi-text-muted: #8B7B6B;
+}
+
+/* ============================================
+   Safe Area & Base
+   ============================================ */
+html {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ============================================
+   Scrollbar Styles
+   ============================================ */
+.fi-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fi-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fi-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--fi-text-muted);
+  border-radius: 3px;
+}
+
+.fi-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--fi-text-secondary);
+}
+
+/* Hide scrollbar but keep functionality */
+.fi-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.fi-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   Shimmer / Skeleton Loading
+   ============================================ */
+@keyframes fi-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.fi-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--fi-bg-secondary) 25%,
+    var(--fi-bg-card) 50%,
+    var(--fi-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: fi-shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   Card Styles
+   ============================================ */
+.fi-card {
+  background: var(--fi-bg-card);
+  border-radius: 12px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fi-card:hover {
+  transform: translateY(-1px);
+}
+
+.fi-card:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   Focus Ring
+   ============================================ */
+.fi-focus-ring:focus-visible {
+  outline: 2px solid var(--fi-accent-brine);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+   Modal Backdrop
+   ============================================ */
+.fi-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 24, 16, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+
+.dark .fi-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================
+   Progress Bar
+   ============================================ */
+.fi-progress {
+  width: 100%;
+  height: 8px;
+  background: var(--fi-bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.fi-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--fi-accent-brine);
+}
+
+.fi-progress-bar.fi-success {
+  background: var(--fi-success);
+}
+
+.fi-progress-bar.fi-warning {
+  background: var(--fi-warning);
+}
+
+.fi-progress-bar.fi-danger {
+  background: var(--fi-danger);
+}
+
+/* ============================================
+   Fade & Slide Transitions
+   ============================================ */
+@keyframes fi-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fi-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fi-fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fi-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fi-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fi-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fi-slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.fi-animate-fade-in {
+  animation: fi-fade-in 0.2s ease-out;
+}
+
+.fi-animate-fade-in-up {
+  animation: fi-fade-in-up 0.3s ease-out;
+}
+
+.fi-animate-fade-in-down {
+  animation: fi-fade-in-down 0.3s ease-out;
+}
+
+.fi-animate-slide-in-right {
+  animation: fi-slide-in-right 0.3s ease-out;
+}
+
+.fi-animate-slide-in-left {
+  animation: fi-slide-in-left 0.3s ease-out;
+}
+
+.fi-animate-slide-up {
+  animation: fi-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   Tier Badges
+   ============================================ */
+.fi-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.fi-tier-badge.beginner {
+  background: color-mix(in srgb, var(--fi-tier-beginner) 15%, transparent);
+  color: var(--fi-tier-beginner);
+}
+
+.fi-tier-badge.seasoned {
+  background: color-mix(in srgb, var(--fi-tier-seasoned) 15%, transparent);
+  color: var(--fi-tier-seasoned);
+}
+
+.fi-tier-badge.ambitious {
+  background: color-mix(in srgb, var(--fi-tier-ambitious) 15%, transparent);
+  color: var(--fi-tier-ambitious);
+}
+
+.fi-tier-badge.advanced {
+  background: color-mix(in srgb, var(--fi-tier-advanced) 15%, transparent);
+  color: var(--fi-tier-advanced);
+}
+
+.fi-tier-badge.master {
+  background: color-mix(in srgb, var(--fi-tier-master) 15%, transparent);
+  color: var(--fi-tier-master);
+}
+
+/* ============================================
+   Range Slider
+   ============================================ */
+.fi-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--fi-bg-secondary);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.fi-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--fi-accent-brine);
+  cursor: pointer;
+  border: 2px solid var(--fi-bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease;
+}
+
+.fi-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.fi-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--fi-accent-brine);
+  cursor: pointer;
+  border: 2px solid var(--fi-bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease;
+}
+
+.fi-range::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* ============================================
+   Line Clamp
+   ============================================ */
+.fi-line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fi-line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fi-line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================
+   Drag Handle
+   ============================================ */
+.fi-drag-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.fi-drag-handle:active {
+  cursor: grabbing;
+}
+
+.fi-dragging {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.fi-drop-target {
+  border: 2px dashed var(--fi-accent-brine);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fi-accent-brine) 5%, transparent);
+}
+
+/* ============================================
+   Editor / Input Styles
+   ============================================ */
+.fi-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--fi-bg-secondary);
+  border-radius: 8px;
+  background: var(--fi-bg-card);
+  color: var(--fi-text-primary);
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fi-input:focus {
+  outline: none;
+  border-color: var(--fi-accent-brine);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fi-accent-brine) 15%, transparent);
+}
+
+.fi-input::placeholder {
+  color: var(--fi-text-muted);
+}
+
+.fi-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ============================================
+   Media Drop Zone
+   ============================================ */
+.fi-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 2px dashed var(--fi-text-muted);
+  border-radius: 12px;
+  color: var(--fi-text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.fi-drop-zone:hover,
+.fi-drop-zone.active {
+  border-color: var(--fi-accent-brine);
+  background: color-mix(in srgb, var(--fi-accent-brine) 5%, transparent);
+  color: var(--fi-accent-brine);
+}
+
+/* ============================================
+   Tag Pill
+   ============================================ */
+.fi-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--fi-bg-secondary);
+  color: var(--fi-text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.fi-tag:hover {
+  background: color-mix(in srgb, var(--fi-accent-brine) 15%, transparent);
+  color: var(--fi-accent-brine);
+}
+
+.fi-tag .fi-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fi-tag .fi-tag-remove:hover {
+  background: color-mix(in srgb, var(--fi-danger) 20%, transparent);
+  color: var(--fi-danger);
+}
+
+/* ============================================
+   Menu Card
+   ============================================ */
+.fi-menu-card {
+  background: var(--fi-bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--fi-bg-secondary);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.fi-menu-card:hover {
+  border-color: var(--fi-accent-brine);
+}
+
+.fi-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  color: var(--fi-text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fi-menu-item:hover {
+  background: var(--fi-bg-secondary);
+}
+
+.fi-menu-item.active {
+  background: color-mix(in srgb, var(--fi-accent-brine) 10%, transparent);
+  color: var(--fi-accent-brine);
+}
+
+.fi-menu-item.danger {
+  color: var(--fi-danger);
+}
+
+.fi-menu-item.danger:hover {
+  background: color-mix(in srgb, var(--fi-danger) 8%, transparent);
+}
+
+/* ============================================
+   Utility: Animate Fade In (staggered)
+   ============================================ */
+.fi-stagger > * {
+  animation: fi-fade-in-up 0.3s ease-out both;
+}
+
+.fi-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.fi-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.fi-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.fi-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.fi-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.fi-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.fi-stagger > *:nth-child(7) { animation-delay: 300ms; }
+.fi-stagger > *:nth-child(8) { animation-delay: 350ms; }
+.fi-stagger > *:nth-child(9) { animation-delay: 400ms; }
+.fi-stagger > *:nth-child(10) { animation-delay: 450ms; }
+
+/* ============================================
+   Utility: Truncate
+   ============================================ */
+.fi-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   Utility: Screen Reader Only
+   ============================================ */
+.fi-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
