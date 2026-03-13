@@ -1,0 +1,49 @@
+{
+  "name": "fermenti",
+  "version": "0.1.0",
+  "description": "A fermentation-inspired Vue 3 + Tailwind UI framework for building rich PWAs",
+  "main": "dist/fermenti.umd.js",
+  "module": "dist/fermenti.es.js",
+  "style": "dist/fermenti.css",
+  "exports": {
+    ".": {
+      "import": "./dist/fermenti.es.js",
+      "require": "./dist/fermenti.umd.js"
+    },
+    "./theme": "./src/theme.js",
+    "./css": "./dist/fermenti.css"
+  },
+  "files": [
+    "dist/",
+    "src/"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.13",
+    "vite": "^6.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeuncodeco/fermenti.git"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "ui-framework",
+    "tailwind",
+    "pwa",
+    "components",
+    "fermenti"
+  ]
+}

@@ -1,238 +1,396 @@
-# FERMENT
+# Fermenti
 
-**A cultural guide to lactic acid fermentation from around the world.**
+**A fermentation-inspired Vue 3 + Tailwind CSS UI framework for building rich PWAs.**
 
-Browse 30 recipes, read 23 wiki articles, track batches, manage your pantry and equipment, and master the ancient art of fermentation - all in a single-page, offline-capable web app.
+> Warm, earthy, and full of culture. Fermenti gives your apps the patience of a slow ferment and the punch of a well-aged hot sauce.
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Vue 3](https://img.shields.io/badge/Vue-3.x-42b883.svg)](https://vuejs.org/)
 
 ---
 
-## Tech Stack
+## Quick Start
 
-| Layer | Choice | Notes |
-|-------|--------|-------|
-| **Framework** | Vue 3 (CDN) | `vue.global.prod.js` - no build step |
-| **CSS** | Tailwind CSS (CDN) | Config inline in `<script>` block in `index.html` |
-| **Fonts** | Instrument Serif, DM Sans, JetBrains Mono | Google Fonts |
-| **Storage** | localStorage | Persisted via `FermentStore` helper |
-| **PWA** | Service Worker + manifest.json | Offline support |
+### CDN (Zero Build Step)
+
+Drop these into any HTML file and start building:
+
+```html
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          bg: { primary: '#FAF7F2', secondary: '#F2ECE3', card: '#FFFFFF' },
+          text: { primary: '#2C1810', secondary: '#6B5344', muted: '#A89485' },
+          accent: { brine: '#C4A35A', ferment: '#D4553A', culture: '#7B8F3A', aged: '#8B6B4A' },
+          tier: { beginner: '#8EAE68', seasoned: '#C4A35A', ambitious: '#D4813A', advanced: '#D4553A', master: '#6B3A5C' },
+          dark: { primary: '#1A1410', secondary: '#241E18', card: '#2E2620', text: '#F2ECE3', 'text-secondary': '#C4B5A3' }
+        },
+        fontFamily: {
+          serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+          sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        transitionTimingFunction: { ferment: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+      }
+    }
+  }
+</script>
+
+<!-- Vue 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+<!-- Fermenti CSS -->
+<link rel="stylesheet" href="path/to/fermenti.css">
+
+<!-- Fermenti Components (load as modules) -->
+<script type="module">
+  import FiButton from './fermenti/src/components/FiButton.js';
+  import FiCard from './fermenti/src/components/FiCard.js';
+  // ... import what you need
+
+  const app = Vue.createApp({ /* your app */ });
+  app.component('fi-button', FiButton);
+  app.component('fi-card', FiCard);
+  app.mount('#app');
+</script>
+```
+
+### pnpm / npm
+
+```bash
+pnpm add fermenti
+# or
+npm install fermenti
+```
+
+```js
+import { createApp } from 'vue';
+import Fermenti from 'fermenti';
+import 'fermenti/css';
+
+const app = createApp(App);
+app.use(Fermenti);  // Registers all Fi* components globally
+app.mount('#app');
+```
+
+Add the Fermenti Tailwind preset to your `tailwind.config.js`:
+
+```js
+module.exports = {
+  presets: [require('fermenti/theme')],
+  // your config...
+}
+```
+
+---
+
+## Components
+
+Fermenti ships **27 components**, all prefixed with `Fi`:
+
+### Layout & Navigation
+
+| Component | Description |
+|-----------|-------------|
+| `<fi-grid>` | Responsive grid with configurable columns and gap |
+| `<fi-nav-bar>` | Top or bottom navigation bar with brand and items |
+| `<fi-sidebar>` | Collapsible sidebar with nested navigation items |
+| `<fi-tabs>` | Tab navigation with underline, pills, or segment variants |
+| `<fi-stepper>` | Multi-step wizard with progress dots and back/next |
+
+### Data Display
+
+| Component | Description |
+|-----------|-------------|
+| `<fi-card>` | Versatile card with card/list view modes and slots |
+| `<fi-badge>` | Status badge with color variants (success, warning, danger, etc.) |
+| `<fi-avatar>` | Circle avatar with image or initials fallback |
+| `<fi-progress>` | Animated progress bar with label and value display |
+| `<fi-icon>` | Universal icon wrapper (built-in + Lucide/Heroicons/Material/FA) |
+| `<fi-empty-state>` | Placeholder for empty content areas |
+| `<fi-changelog>` | Release notes viewer with expandable sections |
+
+### Forms & Inputs
+
+| Component | Description |
+|-----------|-------------|
+| `<fi-button>` | Button with primary/secondary/ghost/danger variants and sizes |
+| `<fi-input>` | Text input with label, validation, and icon support |
+| `<fi-textarea>` | Auto-resizing textarea with character count |
+| `<fi-select>` | Styled select dropdown |
+| `<fi-toggle>` | Toggle switch with label and description |
+| `<fi-chip>` | Selectable chip/tag pill |
+| `<fi-search-bar>` | Debounced search input with clear button |
+| `<fi-filter-panel>` | Multi-faceted filter panel with collapsible groups |
+
+### Feedback & Overlays
+
+| Component | Description |
+|-----------|-------------|
+| `<fi-modal>` | Modal dialog with backdrop blur and size variants |
+| `<fi-toast>` | Toast notification system with auto-dismiss |
+| `<fi-collapsible>` | Expandable/collapsible content section |
+
+### Editors
+
+| Component | Description |
+|-----------|-------------|
+| `<fi-text-editor>` | Inline text editing with save/cancel and auto-grow |
+| `<fi-list-editor>` | Drag-to-reorder list editor with add/remove |
+| `<fi-tag-editor>` | Tag input with typeahead suggestions |
+| `<fi-media-picker>` | File upload with drag-and-drop, camera, and URL input |
+
+---
+
+## Theme
+
+Fermenti's design language is inspired by the fermentation process: warm, earthy, and natural.
+
+### Color Palette
+
+| Token | Light | Dark | Use |
+|-------|-------|------|-----|
+| `bg-primary` | `#FAF7F2` (cream) | `#1A1410` | Page background |
+| `bg-secondary` | `#F2ECE3` | `#241E18` | Secondary surfaces |
+| `bg-card` | `#FFFFFF` | `#2E2620` | Card backgrounds |
+| `accent-brine` | `#C4A35A` (golden) | same | Primary accent |
+| `accent-ferment` | `#D4553A` (red) | same | Danger / emphasis |
+| `accent-culture` | `#7B8F3A` (green) | same | Success / growth |
+| `accent-aged` | `#8B6B4A` (brown) | same | Neutral / aged |
+
+### Typography
+
+- **Serif**: Instrument Serif (headings, display text)
+- **Sans**: DM Sans (body text, UI elements)
+- **Mono**: JetBrains Mono (code, data)
+
+### Customizing Colors
+
+Override CSS custom properties at runtime:
+
+```css
+:root {
+  --fi-accent-brine: #your-primary-color;
+  --fi-accent-culture: #your-success-color;
+  --fi-bg-primary: #your-background;
+}
+```
+
+---
+
+## Icons & Fonts
+
+### Built-in Icons
+
+Fermenti includes 20+ essential SVG icons (search, close, chevron, check, plus, minus, settings, filter, menu, grid, list, edit, trash, download, upload, link, star, info, warning, eye).
+
+```html
+<fi-icon name="search" size="md"></fi-icon>
+<fi-icon name="settings" size="lg"></fi-icon>
+```
+
+### Adding Icon Libraries
+
+Fermenti's `<fi-icon>` supports external icon libraries. Just load the library's CSS/JS and specify the library prop:
+
+**Lucide Icons:**
+```html
+<script src="https://unpkg.com/lucide@latest"></script>
+<fi-icon name="heart" library="lucide"></fi-icon>
+```
+
+**Heroicons:**
+```html
+<fi-icon name="heart" library="heroicons"></fi-icon>
+```
+
+**Material Icons:**
+```html
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<fi-icon name="favorite" library="material"></fi-icon>
+```
+
+**Font Awesome:**
+```html
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<fi-icon name="heart" library="fontawesome"></fi-icon>
+```
+
+### Changing Fonts
+
+Override in your Tailwind config:
+
+```js
+theme: {
+  extend: {
+    fontFamily: {
+      serif: ['"Your Serif Font"', 'Georgia', 'serif'],
+      sans: ['"Your Sans Font"', 'system-ui', 'sans-serif'],
+    }
+  }
+}
+```
+
+---
+
+## Utilities
+
+### FermentiFormat
+
+Unit conversion, date formatting, and display helpers:
+
+```js
+import FermentiFormat from 'fermenti/src/utils/formatting.js';
+
+FermentiFormat.convertUnit(100, 'g', 'oz');     // 3.5274
+FermentiFormat.formatDate('2026-03-13');          // "Mar 13, 2026"
+FermentiFormat.formatRelativeDate('2026-03-12'); // "Yesterday"
+FermentiFormat.uid();                             // "m1abc2def3"
+```
+
+### FermentiSearch
+
+Fuzzy full-text search:
+
+```js
+import FermentiSearch from 'fermenti/src/utils/search.js';
+
+const index = FermentiSearch.buildIndex(items, ['name', 'description', 'tags']);
+const results = FermentiSearch.search('query', index);
+```
+
+### FermentiStore
+
+localStorage persistence with migrations and export/import:
+
+```js
+import { createStore } from 'fermenti/src/utils/store.js';
+
+const store = createStore('myapp_v1', () => ({
+  settings: { theme: 'light' },
+  data: [],
+}));
+
+const state = store.load();
+store.save(state);
+store.exportJSON(state);  // Downloads backup
+```
+
+---
+
+## Dark Mode
+
+Toggle dark mode by adding/removing the `dark` class on `<html>`:
+
+```js
+document.documentElement.classList.toggle('dark');
+```
+
+All Fermenti components automatically adapt to dark mode.
+
+---
+
+## Demos
+
+Run the demos locally:
+
+```bash
+# Clone the repo
+git clone https://github.com/codeuncodeco/fermenti.git
+cd fermenti
+
+# Option 1: Simple HTTP server
+python3 -m http.server 8000
+# Open http://localhost:8000/demo/
+
+# Option 2: Vite dev server
+pnpm install
+pnpm run dev
+```
+
+### Demo Pages
+
+- **Component Showcase** - Every component with prop variations
+- **Dashboard Demo** - Mock analytics dashboard
+- **Settings Demo** - Mock app settings page
+
+---
 
 ## Project Structure
 
 ```
-ferment/
-├── index.html                  # App shell, Tailwind config, Vue mount, OG meta tags
-├── css/
-│   └── app.css                 # Custom styles (vars, animations, wiki, editors)
-├── js/
-│   ├── app.js                  # Vue 3 app init, state, routing, history, OG meta
-│   ├── store.js                # localStorage persistence + import/export
-│   ├── recipes.js              # Recipe loader (JSON manifest + fallback)
-│   ├── wiki.js                 # Wiki article loader (JSON manifest)
-│   ├── utils/
-│   │   ├── formatting.js       # FermentFormat - units, scaling, conversion
-│   │   ├── search.js           # FermentSearch - full-text fuzzy search
-│   │   └── matching.js         # FermentMatching - pantry-to-recipe matching
-│   └── components/
-│       ├── SearchBar.js        # Search input component
-│       ├── FilterPanel.js      # Multi-facet filter UI
-│       ├── RecipeCard.js       # Card / list / table row for a recipe
-│       ├── RecipePage.js       # Full-page recipe view with inline editing
-│       ├── BrowseView.js       # Recipe browsing grid + filters + sort
-│       ├── WikiView.js         # Wiki article list, search, collapsible tag filter
-│       ├── WikiArticle.js      # Rich wiki article renderer + inline editing
-│       ├── PantryManager.js    # Pantry + equipment inventory CRUD
-│       ├── JournalManager.js   # Batch tracking / journal entries
-│       ├── BrineCalculator.js  # Salt / brine ratio calculator
-│       ├── BatchScaler.js      # Scale any recipe up/down
-│       ├── TimerManager.js     # Timer management
-│       ├── ToolsView.js        # Tools menu (calculator, converter, pH, calendar)
-│       ├── SettingsModal.js    # App settings (links to standalone changelog page)
-│       ├── ChangelogView.js   # Standalone changelog with Antigravity-style release cards
-│       ├── OnboardingModal.js  # First-run onboarding wizard
-│       ├── WelcomePage.js      # Welcome / intro page
-│       ├── InlineEditor.js     # Edit framework + FermentEdits store
-│       └── editors/            # Field-specific inline editors
-│           ├── TextEditor.js
-│           ├── ListEditor.js
-│           ├── MediaPicker.js
-│           ├── TagEditor.js
-│           └── CitationEditor.js
-├── data/
-│   ├── recipes/
-│   │   ├── manifest.json       # Recipe file index
-│   │   ├── tier1-beginner.js   # Fallback recipe data
-│   │   └── individual/         # 30 individual recipe JSON files
-│   └── wiki/
-│       ├── manifest.json       # Wiki article index (23 articles)
-│       └── *.json              # Individual wiki article files
-├── assets/
-│   └── icons/                  # Favicon, PWA icons
-├── manifest.json               # PWA manifest
-└── sw.js                       # Service worker (cache-first)
+fermenti/
+├── src/                          # Framework source
+│   ├── index.js                  # Main entry - exports all components
+│   ├── plugin.js                 # Vue plugin for app.use()
+│   ├── theme.js                  # Tailwind preset
+│   ├── icons.js                  # Built-in icon set
+│   ├── css/fermenti.css          # Framework styles
+│   ├── components/               # 23 UI components
+│   │   ├── FiButton.js
+│   │   ├── FiCard.js
+│   │   ├── FiSearchBar.js
+│   │   ├── ... (20 more)
+│   │   └── editors/              # 4 editor components
+│   │       ├── FiTextEditor.js
+│   │       ├── FiListEditor.js
+│   │       ├── FiTagEditor.js
+│   │       └── FiMediaPicker.js
+│   └── utils/
+│       ├── formatting.js         # Unit/date formatting
+│       ├── search.js             # Fuzzy search engine
+│       └── store.js              # localStorage wrapper
+├── demo/                         # Demo pages
+│   ├── index.html
+│   ├── app.js
+│   ├── showcase.js
+│   ├── dashboard.js
+│   └── settings.js
+├── ferment/                      # Original Ferment app (preserved)
+├── dist/                         # Built output
+├── package.json
+├── vite.config.js
+├── CHANGELOG.md
+└── LICENSE
 ```
-
-## Deployment
-
-### Cache Busting
-
-All local JS files include a `?v=YYYYMMDD` query string (e.g. `?v=20260310`). On each deployment, bump this version string across all `<script src="...?v=...">` tags in `index.html` and update the `CACHE_NAME` in `sw.js` to force browsers and the service worker to reload fresh assets.
-
-## Features
-
-### Recipes
-- **30 recipes** from cultures worldwide with rich metadata
-- Card, list, and table view modes with hero images
-- Shelf life display on cards and recipe detail pages
-- Difficulty tiers, fermentation time, ingredient counts
-- Step-by-step instructions with 3 tips per step
-- Cultural context, variations, and dehydrator integration
-
-### Wiki
-- **23 articles** covering fermentation science, safety, equipment, and techniques
-- Rich content: tables, callouts, images, citations, cross-links
-- Collapsible tag filter for easy browsing
-- Quick glossary search across all articles
-
-### Pantry & Equipment
-- Full inventory management with categories (produce, spices, salt, cultures, equipment)
-- Equipment items with product links, images, and descriptions
-- Quick-add equipment suggestions (jars, airlocks, weights, scales)
-- Recipe matching: see what you can make with what you have
-
-### Sharing & Meta
-- URL-based sharing via hash routing (`#/recipe/slug`, `#/wiki/slug`)
-- Dynamic Open Graph and Twitter Card meta tags
-- SVG-based OG images for wiki articles
-- Recipe hero images as OG images
-
-### Tools
-- Brine Calculator, Batch Scaler, Timers, Unit Converter, pH Reference, Seasonal Calendar
-
-## Architecture
-
-### Routing & History
-
-No router library. State-driven routing using reactive refs:
-
-- **`currentRoute`**: `'home'` | `'recipe'` | `'wiki-article'` | `'welcome'` | `'changelog'`
-- **`currentTab`**: `'browse'` | `'wiki'` | `'pantry'` | `'journal'` | `'tools'`
-
-Browser history managed with `history.pushState()` / `popstate`. Hash URLs (`#/recipe/slug`, `#/wiki/slug`, `#/changelog`) are restored on page load for sharing. Back button uses `history.back()` for clean navigation.
-
-### Data Flow
-
-```
-index.html (template + OG meta tags)
-  └─ app.js (setup, state, actions, meta updates)
-       ├─ FermentStore (localStorage read/write)
-       ├─ FermentRecipes (recipe loader - JSON manifest)
-       ├─ FermentWiki (wiki loader - JSON manifest)
-       ├─ FermentSearch (search index)
-       ├─ FermentMatching (pantry matching)
-       └─ FermentEdits (inline edit overlay store)
-```
-
-State mutations flow **down** via props, events flow **up** via `$emit`. The root `app.js` owns all state and persists to localStorage on every meaningful change.
-
-### Error Handling
-
-FERMENT uses a **three-layer error boundary** pattern to guarantee the app never white-screens:
-
-| Layer | Mechanism | Scope |
-|-------|-----------|-------|
-| **Component** | `errorCaptured(err, _vm, info)` hook | Catches errors in child components, sets a local error state, renders a dismissible error banner |
-| **Global** | `app.config.errorHandler` | Catch-all for anything that escapes component boundaries |
-| **Async** | `try/catch/finally` in `onMounted` | Ensures `ready.value = true` always fires, even if data loading fails |
-
-**Rules for new components:**
-
-1. Every component that renders dynamic data or has children **must** include an `errorCaptured` hook
-2. Add a corresponding `componentError: null` data property
-3. Show an error banner with a dismiss button when the error is set: `<div v-if="componentError">...</div>`
-4. Wrap the main content in `<template v-if="!componentError">` so a crashed section degrades gracefully
-5. Return `false` from `errorCaptured` to stop propagation
-
-**Reference implementation:** See `BrowseView.js` for the canonical pattern.
-
-**Utility functions** (`FermentFormat`, etc.) must guard against invalid inputs - especially `new Date()` which silently returns Invalid Date rather than throwing. Always check `isNaN(d.getTime())` before calling date methods.
-
-### Inline Editing
-
-Recipes and wiki articles support inline editing when enabled in Settings. Edits are stored as localStorage overlays (via `FermentEdits`), merged at render time with the original JSON data. **Disabled by default** - toggle in Settings > Enable Editing.
-
-## Running Locally
-
-Static files - serve with any HTTP server:
-
-```bash
-python3 -m http.server 8000
-```
-
-Open `http://localhost:8000` in your browser.
-
-## Adding Content
-
-### Recipes
-
-1. Create a JSON file in `data/recipes/individual/` following the schema of existing recipes
-2. Add the entry to `data/recipes/manifest.json`
-3. Update `sw.js` cache list
-
-### Wiki Articles
-
-1. Create a JSON file in `data/wiki/` with sections, citations, and cross-links
-2. Add the entry to `data/wiki/manifest.json`
-3. Update `sw.js` cache list
 
 ---
 
 ## Contributing
 
-The README and `ChangelogView.js` are the **source of truth** for this project's roadmap and history. Every meaningful contribution - whether from a human or an AI agent - must keep both up to date.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-component`)
+3. Commit your changes (`git commit -m 'Add amazing component'`)
+4. Push to the branch (`git push origin feature/amazing-component`)
+5. Open a Pull Request
 
-### For Humans
+### For AI Agents
 
-1. **Fork** the repository and create a branch: `git checkout -b feat/your-feature`
-2. Make your changes following the existing patterns (Vue 3 CDN component style, Tailwind classes, no build step)
-3. **Update the changelog** - add a new entry or items to the latest entry in `js/components/ChangelogView.js`:
-   - `feature` - new capability
-   - `enhancement` - improvement to existing feature
-   - `fix` - bug fix
-4. **Update this README** if you changed the architecture, routing, or project structure
-5. Open a pull request with a clear title and description
-
-**PR checklist:**
-- [ ] Describe what changed and why (not just what the code does)
-- [ ] Add changelog entry to `ChangelogView.js`
-- [ ] Update README.md if architecture or routing changed
-- [ ] New components include `errorCaptured` hook + error banner (see Error Handling section)
-- [ ] Utility functions guard against invalid inputs (null, NaN, Invalid Date)
-- [ ] Screenshots or screen recording for visual changes
-- [ ] No build step required - test by serving with `python3 -m http.server 8000`
-
-### For AI Agents (Claude, etc.)
-
-When implementing changes in this codebase, follow these requirements before every push:
-
-1. **Update `ChangelogView.js`**: Add items under the latest `version` entry (or create a new entry). Use the correct type: `feature`, `enhancement`, or `fix`. Add a `link` to the relevant app route if applicable.
-
-2. **Update `README.md`**:
-   - If `currentRoute` values changed → update the Architecture > Routing section
-   - If new components were added → update the Project Structure section
-   - If new features were added → update the Features section
-
-3. **Commit message format**: Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`) with a short imperative summary, followed by a bulleted list of what changed and why.
-
-4. **One commit per logical task** - the user can review, roll back, or cherry-pick individual changes cleanly.
-
-5. **Do not break the no-build-step contract** - all JS must be valid in-browser ES6, loaded via `<script>` tags. No imports, no bundler syntax.
-
-6. **Crash-proof all new components** - add an `errorCaptured` hook, error data property, and error banner to every component that renders dynamic data or has child components. Follow the pattern in `BrowseView.js`. Guard utility functions against null/NaN/Invalid Date inputs.
-
-### Goal
-
-This project uses **documentation-driven development**: the README describes what FERMENT is, the changelog documents what changed and when. Contributors - human or machine - maintain this contract so the project stays readable and navigable over time. 🌟
+- Components use Vue 3 Options API with inline `template` strings
+- No build step needed for development - load files directly
+- Follow the `Fi` prefix naming convention
+- Use Tailwind classes from the Fermenti theme
+- Always include dark mode variants (`dark:`)
+- Add proper ARIA attributes for accessibility
 
 ---
 
-*Made with salt, patience, and good bacteria.*
+## Credits
+
+Fermenti was extracted from [Ferment](https://github.com/codeuncodeco/fermenti/tree/master/ferment), a cultural guide to lactic acid fermentation. The warm, earthy design language and component patterns were born from building a real-world PWA and then generalized into a reusable framework.
+
+Made with salt, patience, and good bacteria.
+
+---
+
+## License
+
+[GNU General Public License v3.0](LICENSE)
