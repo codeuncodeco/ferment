@@ -1,5 +1,5 @@
 /**
- * FERMENT — Main Application
+ * FERMENT - Main Application
  * Vue 3 app initialization, state management, routing
  */
 
@@ -12,11 +12,25 @@ const app = createApp({
 
     const ready = ref(false);
     const currentTab = ref('browse');
-    const currentRoute = ref('home');
+    const currentRoute = ref(stored.settings.hasSeenWelcome ? 'home' : 'welcome');
     const viewMode = ref(stored.settings.defaultView || 'cards');
     const selectedRecipe = ref(null);
     const showSettings = ref(false);
     const searchQuery = ref('');
+
+    // ── Contextual (secondary) nav - screen-specific tabs above mobile nav ──
+    const contextualNavTabs = ref([]);
+    const contextualNavActive = ref('');
+
+    function setContextualNav(tabs, active) {
+      contextualNavTabs.value = tabs || [];
+      contextualNavActive.value = active || (tabs && tabs.length ? tabs[0].id : '');
+    }
+
+    function clearContextualNav() {
+      contextualNavTabs.value = [];
+      contextualNavActive.value = '';
+    }
 
     // ── Core state ──
     const settings = reactive({ ...stored.settings });
@@ -44,17 +58,24 @@ const app = createApp({
       searchQuery: '',
     });
 
+    // ── Wiki state ──
+    const wikiArticles = ref([]);
+    const wikiLoaded = ref(false);
+    const selectedWikiArticle = ref(null);
+
     // ── Tabs ──
     const tabs = [
       { id: 'browse', label: 'Browse' },
+      { id: 'wiki', label: 'Wiki' },
       { id: 'pantry', label: 'Pantry' },
       { id: 'journal', label: 'Journal' },
       { id: 'tools', label: 'Tools' },
     ];
 
-    // ── All recipes ──
+    // ── All recipes (loaded async from individual JSON files) ──
+    const recipesLoaded = ref(false);
     const allRecipes = computed(() => {
-      return FermentRecipes.getAll();
+      return recipesLoaded.value ? FermentRecipes.getAll() : [];
     });
 
     // ── Search index ──
@@ -100,11 +121,14 @@ const app = createApp({
       // Max ferment days
       if (filters.maxDays !== null && filters.maxDays > 0) {
         recipes = recipes.filter(r => {
-          const minDays = r.fermentTimeUnit === 'months'
-            ? r.fermentTimeMin * 30
-            : r.fermentTimeUnit === 'weeks'
-              ? r.fermentTimeMin * 7
-              : r.fermentTimeMin;
+          const unit = (r.fermentTimeUnit || 'days').replace(/s$/, '');
+          const min = r.fermentTimeMin;
+          if (min == null) return true;
+          const minDays = unit === 'hour' ? min / 24
+            : unit === 'week' ? min * 7
+            : unit === 'month' ? min * 30
+            : unit === 'year' ? min * 365
+            : min;
           return minDays <= filters.maxDays;
         });
       }
@@ -132,12 +156,26 @@ const app = createApp({
     });
 
     // ── Actions ──
+    function enterApp() {
+      settings.hasSeenWelcome = true;
+      currentRoute.value = 'home';
+      persist();
+    }
+
+    function showWelcome() {
+      currentRoute.value = 'welcome';
+      window.scrollTo({ top: 0 });
+    }
+
     function updateFilters(newFilters) {
       Object.assign(filters, newFilters);
     }
 
     function openRecipe(recipe) {
       selectedRecipe.value = recipe;
+      currentRoute.value = 'recipe';
+      pushHistory({ route: 'recipe', recipeId: recipe.id, recipeSlug: recipe.slug || recipe.id });
+      updateRecipeMeta(recipe);
       // Track recently viewed
       const idx = recentlyViewed.findIndex(r => r.id === recipe.id);
       if (idx > -1) recentlyViewed.splice(idx, 1);
@@ -148,6 +186,15 @@ const app = createApp({
       userLevel.recipesViewed = (userLevel.recipesViewed || 0) + 1;
       recalcLevel();
       persist();
+    }
+
+    function closeRecipe() {
+      selectedRecipe.value = null;
+      currentRoute.value = 'home';
+      updateMeta();
+      if (!suppressPopState) {
+        history.back();
+      }
     }
 
     function toggleFavorite(recipeId) {
@@ -233,14 +280,21 @@ const app = createApp({
         status: 'fermenting',
         startDate: new Date().toISOString().slice(0, 10),
         targetEndDate: (() => {
-          const d = new Date();
-          const days = recipe.fermentTimeUnit === 'months'
-            ? recipe.fermentTimeMax * 30
-            : recipe.fermentTimeUnit === 'weeks'
-              ? recipe.fermentTimeMax * 7
-              : recipe.fermentTimeMax;
-          d.setDate(d.getDate() + days);
-          return d.toISOString().slice(0, 10);
+          try {
+            const d = new Date();
+            const maxVal = recipe.fermentTimeMax || recipe.fermentTimeMin || 14;
+            const days = recipe.fermentTimeUnit === 'months'
+              ? maxVal * 30
+              : recipe.fermentTimeUnit === 'weeks'
+                ? maxVal * 7
+                : maxVal;
+            d.setDate(d.getDate() + (Number.isFinite(days) ? days : 14));
+            return d.toISOString().slice(0, 10);
+          } catch (e) {
+            const d = new Date();
+            d.setDate(d.getDate() + 14);
+            return d.toISOString().slice(0, 10);
+          }
         })(),
         actualEndDate: null,
         batchSize: '1x',
@@ -259,7 +313,7 @@ const app = createApp({
       journal.batches.push(newBatch);
       updateBatches([...journal.batches]);
       currentTab.value = 'journal';
-      if (selectedRecipe.value) selectedRecipe.value = null;
+      if (selectedRecipe.value) closeRecipe();
     }
 
     function browseMatchingRecipes() {
@@ -359,15 +413,275 @@ const app = createApp({
       FermentStore.save(getState());
     }
 
+    // ── Wiki navigation ──
+    function openWikiArticle(article) {
+      selectedWikiArticle.value = article;
+      currentTab.value = 'wiki';
+      currentRoute.value = 'wiki-article';
+      pushHistory({ route: 'wiki-article', articleId: article.id, articleSlug: article.slug || article.id });
+      updateWikiMeta(article);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeWikiArticle() {
+      selectedWikiArticle.value = null;
+      currentRoute.value = 'home';
+      currentTab.value = 'wiki';
+      updateMeta();
+      if (!suppressPopState) {
+        history.back();
+      }
+    }
+
+    function openRecipeFromWiki(recipe) {
+      openRecipe(recipe);
+    }
+
+    // ── Changelog navigation ──
+    function openChangelog() {
+      currentRoute.value = 'changelog';
+      pushHistory({ route: 'changelog' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeChangelog() {
+      currentRoute.value = 'home';
+      updateMeta();
+      if (!suppressPopState) {
+        history.back();
+      }
+    }
+
+    // ── Meta tag management for OG/sharing ──
+    const defaultMeta = {
+      title: 'FERMENT - Your Fermentation Companion',
+      description: 'A cultural guide to lactic acid fermentation from around the world. Browse recipes, track batches, and master the ancient art of fermentation.',
+      image: '',
+    };
+
+    function updateMeta(opts = {}) {
+      const title = opts.title || defaultMeta.title;
+      const desc = opts.description || defaultMeta.description;
+      const image = opts.image || defaultMeta.image;
+      const type = opts.type || 'website';
+
+      document.title = title;
+      const setContent = (id, val) => { const el = document.getElementById(id); if (el) el.setAttribute('content', val); };
+      setContent('meta-description', desc);
+      setContent('og-type', type);
+      setContent('og-title', title);
+      setContent('og-description', desc);
+      setContent('og-image', image);
+      setContent('twitter-title', title);
+      setContent('twitter-description', desc);
+      setContent('twitter-image', image);
+    }
+
+    function updateRecipeMeta(recipe) {
+      if (!recipe) { updateMeta(); return; }
+      const imgs = recipe.images;
+      let heroUrl = '';
+      if (Array.isArray(imgs)) {
+        const hero = imgs.find(i => i.type === 'hero');
+        heroUrl = hero ? hero.url : '';
+      } else if (imgs) {
+        heroUrl = imgs.hero || '';
+      }
+      const timeStr = recipe.totalTimeHuman || (recipe.fermentTimeMin ? recipe.fermentTimeMin + '-' + (recipe.fermentTimeMax || '') + ' ' + (recipe.fermentTimeUnit || 'days') : '');
+      const desc = recipe.tldr || (recipe.name + (recipe.country ? ' from ' + recipe.country : '') + (timeStr ? '. Ferment time: ' + timeStr : '') + '. ' + (recipe.ingredients || []).length + ' ingredients.');
+      updateMeta({
+        title: recipe.name + ' - FERMENT',
+        description: desc,
+        image: heroUrl,
+        type: 'article',
+      });
+    }
+
+    function updateWikiMeta(article) {
+      if (!article) { updateMeta(); return; }
+      const desc = article.subtitle || article.title + ' - Fermentation wiki article with ' + (article.citations || []).length + ' citations.';
+      // Generate a simple OG image using an SVG data URI for wiki articles
+      const icon = wikiArticleIcon(article.id);
+      const svgOg = generateWikiOgImage(article.title, icon);
+      updateMeta({
+        title: article.title + ' - FERMENT Wiki',
+        description: desc,
+        image: svgOg,
+        type: 'article',
+      });
+    }
+
+    function wikiArticleIcon(id) {
+      const icons = {
+        'how-lacto-fermentation-works': '🧪', 'lactic-acid-bacteria': '🦠', 'role-of-carbon-dioxide': '💨',
+        'ph-levels-fermentation': '📊', 'salt-and-fermentation': '🧂', 'temperature-and-fermentation': '🌡️',
+        'troubleshooting-ferments': '🔍', 'fermentation-traditions-worldwide': '🌍',
+        'aromatics-spices-herbs-in-fermentation': '🌿', 'fermentation-tools-through-history': '🏺',
+        'water-quality-and-fermentation': '💧', 'fermented-foods-around-your-kitchen': '🍽️',
+        'best-vegetables-fruits-to-ferment': '🥬', 'dehydrating-and-fermenting': '☀️',
+        'fermentation-and-food-safety': '🛡️', 'fermentation-flavour-chart': '🎨',
+        'second-ferments-and-flavouring': '🍋', 'what-to-do-with-leftover-brine': '🫗',
+        'health-benefits-of-fermented-foods': '💪', 'mold-vs-kahm-when-to-worry': '🔬',
+        'modern-fermentation-equipment': '⚙️', 'scaling-fermentation-batches': '📐',
+        'storing-and-preserving-ferments': '❄️',
+      };
+      return icons[id] || '📖';
+    }
+
+    function generateWikiOgImage(title, icon) {
+      // SVG-based OG image (1200x630) encoded as data URI
+      const escaped = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+        <rect fill="#FAF7F2" width="1200" height="630"/>
+        <rect fill="#C4A35A" x="0" y="0" width="1200" height="6"/>
+        <text x="600" y="240" text-anchor="middle" font-size="80" font-family="serif">${icon}</text>
+        <text x="600" y="340" text-anchor="middle" font-size="42" font-family="Georgia,serif" fill="#2C1810" font-weight="bold">${escaped}</text>
+        <text x="600" y="400" text-anchor="middle" font-size="22" font-family="sans-serif" fill="#A89485">FERMENT Wiki</text>
+        <text x="600" y="580" text-anchor="middle" font-size="18" font-family="sans-serif" fill="#C4A35A">🫙 FERMENT - Your Fermentation Companion</text>
+      </svg>`;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // ── Browser History Management ──
+    let suppressPopState = false;
+
+    function pushHistory(state) {
+      if (suppressPopState) return;
+      const url = new URL(window.location);
+      // Build a descriptive hash
+      if (state.route === 'recipe' && state.recipeSlug) {
+        url.hash = '#/recipe/' + state.recipeSlug;
+      } else if (state.route === 'wiki-article' && state.articleSlug) {
+        url.hash = '#/wiki/' + state.articleSlug;
+      } else if (state.route === 'changelog') {
+        url.hash = '#/changelog';
+      } else if (state.tab) {
+        url.hash = state.tab === 'browse' ? '#/' : '#/' + state.tab;
+      } else {
+        url.hash = '#/';
+      }
+      history.pushState(
+        { route: state.route || 'home', tab: state.tab || currentTab.value, recipeId: state.recipeId, articleId: state.articleId },
+        '',
+        url
+      );
+    }
+
+    function handlePopState(e) {
+      suppressPopState = true;
+      const state = e.state;
+      if (!state) {
+        // No state - go to home/browse
+        selectedRecipe.value = null;
+        selectedWikiArticle.value = null;
+        showSettings.value = false;
+        currentRoute.value = 'home';
+        currentTab.value = 'browse';
+        suppressPopState = false;
+        return;
+      }
+
+      // Close settings if open
+      showSettings.value = false;
+
+      if (state.route === 'recipe' && state.recipeId) {
+        const recipe = allRecipes.value.find(r => r.id === state.recipeId);
+        if (recipe) {
+          selectedRecipe.value = recipe;
+          currentRoute.value = 'recipe';
+          updateRecipeMeta(recipe);
+        } else {
+          currentRoute.value = 'home';
+          currentTab.value = state.tab || 'browse';
+          updateMeta();
+        }
+      } else if (state.route === 'wiki-article' && state.articleId) {
+        const article = wikiArticles.value.find(a => a.id === state.articleId);
+        if (article) {
+          selectedWikiArticle.value = article;
+          currentRoute.value = 'wiki-article';
+          currentTab.value = 'wiki';
+          updateWikiMeta(article);
+        } else {
+          currentRoute.value = 'home';
+          currentTab.value = 'wiki';
+          updateMeta();
+        }
+      } else if (state.route === 'changelog') {
+        currentRoute.value = 'changelog';
+      } else {
+        selectedRecipe.value = null;
+        selectedWikiArticle.value = null;
+        currentRoute.value = state.route || 'home';
+        currentTab.value = state.tab || 'browse';
+        updateMeta();
+      }
+      suppressPopState = false;
+    }
+
     // ── Lifecycle ──
-    onMounted(() => {
-      applyTheme();
-      // Simulate brief loading for smooth startup
-      setTimeout(() => { ready.value = true; }, 300);
+    onMounted(async () => {
+      try {
+        applyTheme();
+
+        // Listen for browser back/forward
+        window.addEventListener('popstate', handlePopState);
+
+        // Load recipes and wiki articles in parallel
+        await Promise.all([
+          FermentRecipes.load(),
+          FermentWiki.load(),
+        ]);
+        recipesLoaded.value = true;
+        wikiArticles.value = FermentWiki.getAll();
+        wikiLoaded.value = true;
+
+        // Restore navigation from hash URL (enables sharing)
+        const hash = window.location.hash;
+        if (hash) {
+          const recipeMatch = hash.match(/^#\/recipe\/(.+)$/);
+          const wikiMatch = hash.match(/^#\/wiki\/(.+)$/);
+          const tabMatch = hash.match(/^#\/(\w+)$/);
+          if (recipeMatch) {
+            const slug = recipeMatch[1];
+            const recipe = allRecipes.value.find(r => (r.slug || r.id) === slug);
+            if (recipe) {
+              selectedRecipe.value = recipe;
+              currentRoute.value = 'recipe';
+              updateRecipeMeta(recipe);
+            }
+          } else if (wikiMatch) {
+            const slug = wikiMatch[1];
+            const article = wikiArticles.value.find(a => (a.slug || a.id) === slug);
+            if (article) {
+              selectedWikiArticle.value = article;
+              currentTab.value = 'wiki';
+              currentRoute.value = 'wiki-article';
+              updateWikiMeta(article);
+            }
+          } else if (tabMatch && tabMatch[1] === 'changelog') {
+            currentRoute.value = 'changelog';
+          } else if (tabMatch && ['browse', 'wiki', 'pantry', 'journal', 'tools'].includes(tabMatch[1])) {
+            currentTab.value = tabMatch[1];
+          }
+        }
+
+        // Set initial history state
+        history.replaceState({ route: currentRoute.value, tab: currentTab.value, recipeId: selectedRecipe.value?.id, articleId: selectedWikiArticle.value?.id }, '', window.location);
+      } catch (e) {
+        console.error('[FERMENT] Mount failed:', e);
+      } finally {
+        ready.value = true;
+      }
     });
 
-    // Auto-persist on tab change
-    watch(currentTab, () => persist());
+    // Auto-persist on tab change + push history
+    watch(currentTab, (tab) => {
+      persist();
+      if (!suppressPopState && currentRoute.value === 'home') {
+        pushHistory({ tab, route: 'home' });
+      }
+    });
 
     return {
       ready,
@@ -390,6 +704,7 @@ const app = createApp({
       filteredRecipes,
       updateFilters,
       openRecipe,
+      closeRecipe,
       toggleFavorite,
       toggleBookmark,
       updateRecipeNotes,
@@ -404,6 +719,20 @@ const app = createApp({
       exportData,
       importData,
       clearData,
+      enterApp,
+      showWelcome,
+      wikiArticles,
+      wikiLoaded,
+      selectedWikiArticle,
+      openWikiArticle,
+      closeWikiArticle,
+      openRecipeFromWiki,
+      openChangelog,
+      closeChangelog,
+      contextualNavTabs,
+      contextualNavActive,
+      setContextualNav,
+      clearContextualNav,
     };
   }
 });
@@ -413,7 +742,7 @@ app.component('search-bar', SearchBarComponent);
 app.component('filter-panel', FilterPanelComponent);
 app.component('recipe-card', RecipeCardComponent);
 app.component('browse-view', BrowseViewComponent);
-app.component('recipe-modal', RecipeModalComponent);
+app.component('recipe-page', RecipePageComponent);
 app.component('pantry-manager', PantryManagerComponent);
 app.component('journal-manager', JournalManagerComponent);
 app.component('brine-calculator', BrineCalculatorComponent);
@@ -422,6 +751,25 @@ app.component('timer-manager', TimerManagerComponent);
 app.component('tools-view', ToolsViewComponent);
 app.component('settings-modal', SettingsModalComponent);
 app.component('onboarding-modal', OnboardingModalComponent);
+app.component('welcome-page', WelcomePageComponent);
+app.component('wiki-view', WikiViewComponent);
+app.component('wiki-article', WikiArticleComponent);
+app.component('text-editor', TextEditorComponent);
+app.component('list-editor', ListEditorComponent);
+app.component('media-picker', MediaPickerComponent);
+app.component('tag-editor', TagEditorComponent);
+app.component('citation-editor', CitationEditorComponent);
+app.component('changelog-view', ChangelogViewComponent);
+
+// Expose FermentFormat to all Vue templates
+// (const declarations don't become window properties, so Vue's template
+// compiler can't find them via _ctx without this explicit registration)
+app.config.globalProperties.FermentFormat = FermentFormat;
+
+// Global error handler - catch-all for unhandled Vue errors
+app.config.errorHandler = (err, _vm, info) => {
+  console.error('[FERMENT] Unhandled error:', info, err);
+};
 
 // Mount the app
 app.mount('#app');

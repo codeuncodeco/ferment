@@ -1,13 +1,20 @@
 /**
- * FERMENT — BrineCalculator Component
+ * FERMENT - BrineCalculator Component
  * Salt/brine calculation tool for fermentation
  */
 
 const BrineCalculatorComponent = {
   name: 'brine-calculator',
 
+  errorCaptured(err, _vm, info) {
+    console.warn('[FERMENT] BrineCalculator error in', info, err);
+    this.calcError = (err && err.message) || 'An error occurred.';
+    return false;
+  },
+
   data() {
     return {
+      calcError: null,
       saltPercent: 3,
       vegWeight: 500,
       weightUnit: 'g',
@@ -31,7 +38,11 @@ const BrineCalculatorComponent = {
     },
 
     saltHuman() {
-      return FermentFormat.saltToHuman(this.saltNeeded);
+      try { return FermentFormat.saltToHuman(this.saltNeeded); } catch (e) { return ''; }
+    },
+
+    saltInWaterHuman() {
+      try { return FermentFormat.saltToHuman(this.saltInWater); } catch (e) { return ''; }
     },
 
     waterNeeded() {
@@ -84,6 +95,12 @@ const BrineCalculatorComponent = {
 
   template: `
     <div class="space-y-6">
+      <div v-if="calcError" class="bg-accent-ferment/10 border border-accent-ferment/30 rounded-xl p-4">
+        <p class="text-sm text-accent-ferment font-medium">Something went wrong.</p>
+        <p class="text-xs text-text-muted mt-1">{{ calcError }}</p>
+        <button @click="calcError = null" class="mt-2 text-xs text-accent-ferment underline">Dismiss</button>
+      </div>
+      <template v-if="!calcError">
       <!-- Calculator Card -->
       <div class="bg-bg-card dark:bg-dark-card rounded-2xl shadow-warm-lg border border-bg-secondary/50 dark:border-dark-secondary overflow-hidden">
         <!-- Header -->
@@ -179,7 +196,7 @@ const BrineCalculatorComponent = {
                 <span class="text-sm text-text-secondary dark:text-dark-text-secondary">Salt in water</span>
                 <div class="text-right">
                   <span class="font-mono text-xl font-medium text-accent-brine">{{ saltInWater.toFixed(1) }}g</span>
-                  <span class="block text-xs text-text-muted font-mono">{{ FermentFormat.saltToHuman(saltInWater) }}</span>
+                  <span class="block text-xs text-text-muted font-mono">{{ saltInWaterHuman }}</span>
                 </div>
               </div>
             </template>
@@ -238,6 +255,7 @@ const BrineCalculatorComponent = {
           </button>
         </div>
       </div>
+      </template>
     </div>
   `
 };

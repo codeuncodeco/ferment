@@ -1,5 +1,5 @@
 /**
- * FERMENT — BatchScaler Component
+ * FERMENT - BatchScaler Component
  * Scale recipe ingredients up or down
  */
 
@@ -11,6 +11,11 @@ const BatchScalerComponent = {
       type: Array,
       default: () => []
     }
+  },
+
+  errorCaptured(err, _vm, info) {
+    console.warn('[FERMENT] Scaler error in', info, err);
+    return false; // Let ToolsView handle display
   },
 
   data() {

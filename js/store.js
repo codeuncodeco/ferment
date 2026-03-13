@@ -1,5 +1,5 @@
 /**
- * FERMENT — localStorage Abstraction Layer
+ * FERMENT - localStorage Abstraction Layer
  * Handles persistence, migrations, and data management
  */
 
@@ -17,6 +17,7 @@ const FermentStore = {
         units: 'metric',
         theme: 'light',
         expertMode: false,
+        enableEditing: false,
         defaultView: 'cards',
         onboardingComplete: false,
       },

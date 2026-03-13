@@ -32,6 +32,18 @@ const RecipeCardComponent = {
 
   emits: ['open', 'toggle-favorite', 'toggle-bookmark', 'start-batch'],
 
+  errorCaptured(err, _vm, info) {
+    console.warn('[FERMENT] RecipeCard error in', info, err);
+    this.cardError = (err && err.message) || 'An error occurred.';
+    return false;
+  },
+
+  data() {
+    return {
+      cardError: null,
+    };
+  },
+
   computed: {
     tier() {
       return FermentFormat.tierInfo(this.recipe.difficulty || 1);
@@ -69,8 +81,21 @@ const RecipeCardComponent = {
     },
 
     timeDisplay() {
+      // Prefer human-readable time string
+      if (this.recipe.totalTimeHuman) return this.recipe.totalTimeHuman;
+      // Build from fermentTime fields
+      if (this.recipe.fermentTimeMin != null) {
+        const u = (this.recipe.fermentTimeUnit || 'days').replace(/s$/, '');
+        const abbr = { hour: 'h', day: 'd', week: 'w', month: 'mo', year: 'y' };
+        const s = abbr[u] || u;
+        if (this.recipe.fermentTimeMax && this.recipe.fermentTimeMax !== this.recipe.fermentTimeMin) {
+          return this.recipe.fermentTimeMin + '–' + this.recipe.fermentTimeMax + s;
+        }
+        return this.recipe.fermentTimeMin + s;
+      }
+      // Legacy fallback
       const t = this.recipe.totalTime || this.recipe.time;
-      if (!t) return '?';
+      if (!t) return '-';
       if (typeof t === 'object') {
         const days = t.min || t.days || 0;
         if (days >= 365) return Math.round(days / 365) + 'y';
@@ -87,6 +112,21 @@ const RecipeCardComponent = {
       return t;
     },
 
+    heroImage() {
+      const imgs = this.recipe.images;
+      if (!imgs) return null;
+      if (Array.isArray(imgs)) {
+        const hero = imgs.find(i => i.type === 'hero');
+        return hero ? hero.url : null;
+      }
+      return imgs.hero || null;
+    },
+
+    shelfLife() {
+      const d = this.recipe.dehydratorIntegration || this.recipe.dehydrate || {};
+      return d.shelfLife || '';
+    },
+
     matchPercent() {
       if (!this.pantryMatch) return null;
       return Math.round(this.pantryMatch.score * 100);
@@ -94,8 +134,16 @@ const RecipeCardComponent = {
   },
 
   template: `
+    <!-- Error Fallback -->
+    <div v-if="cardError"
+      class="recipe-card bg-bg-card dark:bg-dark-card rounded-2xl overflow-hidden border border-accent-ferment/30 p-4">
+      <p class="text-sm text-accent-ferment font-medium">Something went wrong.</p>
+      <p class="text-xs text-text-muted mt-1">{{ cardError }}</p>
+      <button @click="cardError = null" class="mt-2 text-xs text-accent-ferment underline">Dismiss</button>
+    </div>
+
     <!-- CARD VIEW -->
-    <div v-if="viewMode === 'card'"
+    <div v-else-if="viewMode === 'card'"
       class="recipe-card group bg-bg-card dark:bg-dark-card rounded-2xl overflow-hidden cursor-pointer border border-bg-secondary dark:border-dark-secondary flex flex-col"
       @click="$emit('open', recipe)"
       role="article"
@@ -104,29 +152,30 @@ const RecipeCardComponent = {
       @keydown.enter="$emit('open', recipe)"
     >
       <!-- Hero Image -->
-      <div :class="['relative h-44 bg-gradient-to-br overflow-hidden', categoryGradient]">
+      <div :class="['relative h-56 bg-gradient-to-br overflow-hidden', categoryGradient]">
         <!-- Actual image if available -->
-        <img v-if="recipe.images && recipe.images.hero" :src="recipe.images.hero" :alt="recipe.name" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-        <div v-if="recipe.images && recipe.images.hero" class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
+        <img v-if="heroImage" :src="heroImage" :alt="recipe.name" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        <div v-if="heroImage" class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
 
         <!-- Fallback: Category Pattern Overlay -->
-        <div v-if="!recipe.images || !recipe.images.hero" class="absolute inset-0 opacity-20">
+        <div v-if="!heroImage" class="absolute inset-0 opacity-20">
           <div class="absolute inset-0" style="background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 30%, rgba(255,255,255,0.2) 0%, transparent 40%);"></div>
         </div>
 
         <!-- Fallback: Category Icon -->
-        <div v-if="!recipe.images || !recipe.images.hero" class="absolute inset-0 flex items-center justify-center">
+        <div v-if="!heroImage" class="absolute inset-0 flex items-center justify-center">
           <svg class="w-16 h-16 text-white/50 group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="categoryIcon"/></svg>
         </div>
 
         <!-- Tier Badge -->
-        <div class="absolute top-3 left-3">
+        <div class="hidden absolute top-3 left-3">
           <span :class="['inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-white ', 'bg-tier-' + tier.name]">
             {{ tier.emoji }} {{ tier.label }}
           </span>
         </div>
 
-        <!-- Favorite / Bookmark -->
+        <!-- Favorite / Bookmark (hidden until persistence is wired up) -->
+        <!--
         <div class="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             @click.stop="$emit('toggle-favorite', recipe)"
@@ -147,6 +196,7 @@ const RecipeCardComponent = {
             </svg>
           </button>
         </div>
+        -->
 
         <!-- Pantry Match Indicator -->
         <div v-if="matchPercent !== null" class="absolute bottom-3 right-3">
@@ -183,18 +233,22 @@ const RecipeCardComponent = {
         </p>
 
         <!-- Stats Bar -->
-        <div class="flex items-center gap-3 pt-3 border-t border-bg-secondary/70 dark:border-dark-secondary mt-auto">
-          <span class="inline-flex items-center gap-1 text-xs text-text-muted dark:text-dark-text-secondary">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="flex items-center gap-4 pt-3 border-t border-bg-secondary/70 dark:border-dark-secondary mt-auto overflow-x-auto scrollbar-hide">
+          <span class="inline-flex items-center gap-1.5 text-xs text-text-muted dark:text-dark-text-secondary flex-shrink-0">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             {{ timeDisplay }}
           </span>
-          <span class="inline-flex items-center gap-1 text-xs text-text-muted dark:text-dark-text-secondary">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-            {{ ingredientCount }}
+          <span class="inline-flex items-center gap-1.5 text-xs text-text-muted dark:text-dark-text-secondary flex-shrink-0">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            {{ ingredientCount }} ingr.
           </span>
-          <span class="inline-flex items-center gap-1 text-xs text-text-muted dark:text-dark-text-secondary capitalize">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          <span class="inline-flex items-center gap-1.5 text-xs text-text-muted dark:text-dark-text-secondary flex-shrink-0 capitalize">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
             {{ recipe.technique || 'brine' }}
+          </span>
+          <span v-if="shelfLife" class="inline-flex items-center gap-1.5 text-xs text-text-muted dark:text-dark-text-secondary flex-shrink-0">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            {{ shelfLife }}
           </span>
         </div>
 
@@ -206,18 +260,6 @@ const RecipeCardComponent = {
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             Start Batch
-          </button>
-          <button
-            @click.stop="$emit('toggle-bookmark', recipe)"
-            :class="[
-              'inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-200',
-              isBookmarked ? 'bg-accent-brine/20 text-accent-brine' : 'bg-bg-secondary/70 dark:bg-dark-secondary text-text-muted hover:text-text-secondary'
-            ]"
-            :aria-label="isBookmarked ? 'Saved' : 'Save'"
-          >
-            <svg class="w-4 h-4" :fill="isBookmarked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
           </button>
         </div>
       </div>
@@ -232,12 +274,10 @@ const RecipeCardComponent = {
       tabindex="0"
       @keydown.enter="$emit('open', recipe)"
     >
-      <!-- Tier Indicator -->
-      <div :class="['w-1.5 h-12 rounded-full flex-shrink-0', 'bg-tier-' + tier.name]"></div>
-
-      <!-- Category Icon -->
-      <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br', categoryGradient]">
-        <svg class="w-5 h-5 text-white/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="categoryIcon"/></svg>
+      <!-- Recipe Image or Category Icon -->
+      <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gradient-to-br', categoryGradient]">
+        <img v-if="heroImage" :src="heroImage" :alt="recipe.name" class="w-full h-full object-cover" loading="lazy" />
+        <svg v-else class="w-5 h-5 text-white/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="categoryIcon"/></svg>
       </div>
 
       <!-- Name / Origin -->
@@ -275,7 +315,8 @@ const RecipeCardComponent = {
         </span>
       </div>
 
-      <!-- Favorite indicator -->
+      <!-- Favorite indicator (hidden until persistence is wired up) -->
+      <!--
       <div class="flex-shrink-0 flex items-center gap-1">
         <button
           @click.stop="$emit('toggle-favorite', recipe)"
@@ -287,6 +328,7 @@ const RecipeCardComponent = {
           </svg>
         </button>
       </div>
+      -->
     </div>
 
     <!-- TABLE ROW VIEW -->
@@ -297,8 +339,11 @@ const RecipeCardComponent = {
       @keydown.enter="$emit('open', recipe)"
     >
       <td class="px-4 py-3">
-        <div class="flex items-center gap-2">
-          <div :class="['w-2 h-2 rounded-full flex-shrink-0', 'bg-tier-' + tier.name]"></div>
+        <div class="flex items-center gap-3">
+          <div :class="['w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-gradient-to-br', categoryGradient]">
+            <img v-if="heroImage" :src="heroImage" :alt="recipe.name" class="w-full h-full object-cover" loading="lazy" />
+            <svg v-else class="w-4 h-4 text-white/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="categoryIcon"/></svg>
+          </div>
           <div>
             <span class="font-medium text-sm text-text-primary dark:text-dark-text group-hover:text-accent-aged dark:group-hover:text-accent-brine transition-colors">{{ recipe.name }}</span>
             <span v-if="recipe.nameLocal" class="text-xs text-text-muted ml-1.5 font-mono">{{ recipe.nameLocal }}</span>
@@ -325,26 +370,9 @@ const RecipeCardComponent = {
       <td class="px-4 py-3 text-sm text-text-secondary dark:text-dark-text-secondary capitalize">
         {{ recipe.technique || '-' }}
       </td>
-      <td class="px-4 py-3">
-        <div class="flex items-center gap-1">
-          <button
-            @click.stop="$emit('toggle-favorite', recipe)"
-            :class="['p-1 rounded transition-colors', isFavorite ? 'text-accent-ferment' : 'text-text-muted/30 hover:text-text-muted']"
-          >
-            <svg class="w-3.5 h-3.5" :fill="isFavorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </button>
-          <button
-            @click.stop="$emit('toggle-bookmark', recipe)"
-            :class="['p-1 rounded transition-colors', isBookmarked ? 'text-accent-brine' : 'text-text-muted/30 hover:text-text-muted']"
-          >
-            <svg class="w-3.5 h-3.5" :fill="isBookmarked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-          </button>
-        </div>
-      </td>
+        <td class="px-4 py-3">
+          <!-- Actions hidden until persistence is wired up -->
+        </td>
     </tr>
   `
 };
